@@ -45,5 +45,6 @@ while ($true) {
     foreach ($server in $servers) {
         PingServer -Server $server
     }
-    Start-Sleep -Seconds 2
+    Start-Sleep -Seconds 4
 }
+
