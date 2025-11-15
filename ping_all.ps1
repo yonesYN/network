@@ -1,4 +1,4 @@
-$Host.UI.RawUI.WindowSize = New-Object System.Management.Automation.Host.Size(40, 20)
+mode con: cols=40 lines=20
 $servers = @(
     "hybrid.roboping.ir",
     "germany.roboping.ir", 
@@ -17,12 +17,12 @@ $previousPingTimes = @{}
 
 function PingServer {
     param([string]$Server)
-
     try {
         $response = Test-Connection -ComputerName $Server -Count 1 -ErrorAction Stop
         $pingTime = $response.ResponseTime
         $previousTime = $previousPingTimes[$Server]
-        $color = if ($pingTime -gt 190) { 
+
+		$color = if ($pingTime -gt 190) { 
             'Yellow'
         } elseif ($previousTime -and [Math]::Abs($pingTime - $previousTime) -gt 18) {
             'Yellow'
