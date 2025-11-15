@@ -1,4 +1,3 @@
-# Server Ping Test Script
 $servers = @(
     "hybrid.roboping.ir",
     "germany.roboping.ir", 
@@ -13,25 +12,21 @@ $servers = @(
     "izmir.roboping.ir"
 )
 
-function Test-ServerPing {
+function PingServer {
     param([string]$Server)
     
     try {
-        $ping = Test-Connection -ComputerName $Server -Count 1 -Quiet -ErrorAction Stop
-        if ($ping) {
-            $response = Test-Connection -ComputerName $Server -Count 1 -ErrorAction Stop
-            $pingTime = $response.ResponseTime
-            Write-Host "$Server - ${pingTime}ms" -ForegroundColor Green
-        }
+        $response = Test-Connection -ComputerName $Server -Count 1 -ErrorAction Stop
+        $pingTime = $response.ResponseTime
+        
+        $color = if ($pingTime -gt 180) { 'Yellow' } else { 'White' }
+        Write-Host "$Server - ${pingTime}ms" -ForegroundColor $color
     }
     catch {
-        Write-Host "$Server - Timeout" -ForegroundColor Red
+        Write-Host "$Server" -ForegroundColor Red
     }
 }
 
-Write-Host "============================" -ForegroundColor Cyan
-
 foreach ($server in $servers) {
-    Test-ServerPing -Server $server
+    PingServer -Server $server
 }
-
