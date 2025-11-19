@@ -47,23 +47,28 @@ Write-Host "`n=== NETWORK LATENCY ===" -ForegroundColor Cyan
 
 try {
     $pingResults = Test-Connection 4.2.2.4 -Count 9 -Delay 1 -ErrorAction Stop
-    $successPings = $pingResults | Where-Object { $_.ResponseTime -ne $null }
-	
+
+    $successPings = @($pingResults | Where-Object { $_.ResponseTime -ne $null })
+
     if ($successPings.Count -eq 0) {
         Write-Host "latency: Timeout" -ForegroundColor Red
-    } else {
+    }
+    else {
         $avgPing = [math]::Round(($successPings.ResponseTime | Measure-Object -Average).Average)
         $maxPing = ($successPings.ResponseTime | Measure-Object -Maximum).Maximum
         $lostPackets = 9 - $successPings.Count
+        $differ = [math]::Abs($avgPing - $maxPing)
 
-        if ($maxPing -gt 230 -or $lostPackets -gt 0) {
-            Write-Host "latency: ${avgPing}ms 'packet lost'" -ForegroundColor Yellow
-        } else {
+        if ($maxPing -gt 300 -or $lostPackets -gt 0 -or $differ -gt 20) {
+            Write-Host "latency: ${avgPing}ms (issues detected)" -ForegroundColor Yellow
+        }
+        else {
             Write-Host "latency: ${avgPing}ms" -ForegroundColor Green
         }
     }
-} catch {
-    Write-Host "latency: Unable to test" -ForegroundColor Red
+}
+catch {
+    Write-Host "Unable to test" -ForegroundColor Red
 }
 
 Write-Host "`n=== PROXY STATUS ===" -ForegroundColor Cyan
