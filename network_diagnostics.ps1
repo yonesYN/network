@@ -23,7 +23,7 @@ try {
     $data = ConvertFrom-StringData $trace.Content
 	$loc = if ($data.loc) { $data.loc } else { "Unknown" }
     $color = if ($data.loc -eq "IR") { "Green" } else { "Yellow" }
-    Write-Host "IP: $($data.ip) $($data.loc)" -ForegroundColor $color
+    Write-Host "IP: $($data.ip) $loc" -ForegroundColor $color
 } catch {
     Write-Host "Unable to retrieve"
 }
@@ -56,7 +56,7 @@ try {
         $maxPing = ($successPings.ResponseTime | Measure-Object -Maximum).Maximum
         $lostPackets = 9 - $successPings.Count
 
-        if ($maxPing -gt 210 -or $lostPackets -gt 0) {
+        if ($maxPing -gt 230 -or $lostPackets -gt 0) {
             Write-Host "latency: ${avgPing}ms 'packet lost'" -ForegroundColor Yellow
         } else {
             Write-Host "latency: ${avgPing}ms" -ForegroundColor Green
@@ -69,14 +69,18 @@ try {
 Write-Host "`n=== PROXY STATUS ===" -ForegroundColor Cyan
 netsh winhttp show proxy
 
-Write-Host "`n=== WINDOWS DEFENDER STATUS ===" -ForegroundColor Cyan
+Write-Host "`n=== DEFENDER STATUS ===" -ForegroundColor Cyan
 if (Get-Command Get-MpComputerStatus -ErrorAction SilentlyContinue) {
-    $def = Get-MpComputerStatus
-    Write-Host "Real-time Protection Enabled:" $def.RealTimeProtectionEnabled
-    Write-Host "Antispyware Enabled:" $def.AntispywareEnabled
-    Write-Host "Antivirus Enabled:" $def.AntivirusEnabled
+    try {
+        $def = Get-MpComputerStatus -ErrorAction Stop
+        Write-Host "Real-time Protection:" $def.RealTimeProtectionEnabled
+        Write-Host "Antispyware:" $def.AntispywareEnabled
+        Write-Host "Antivirus:" $def.AntivirusEnabled
+	} catch {
+        Write-Host "Defender module not available" -ForegroundColor Red
+	}
 } else {
-    Write-Host "Windows Defender module not available"
+    Write-Host "Defender module not available"
 }
 
 Write-Host "`n=== OTHER ANTIVIRUS ===" -ForegroundColor Cyan
