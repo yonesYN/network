@@ -1,6 +1,6 @@
 
-Write-Host "`n=== InstallLocation ===" -ForegroundColor Cyan
-$path = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object DisplayName -like "*Roboping*" | Select-Object -ExpandProperty InstallLocation -ErrorAction SilentlyContinue
+Write-Host "`n=== Location ===" -ForegroundColor Cyan
+$path = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object DisplayName -like "*Roboping*" | Select-Object -ExpandProperty InstallLocation
 
 if ($path) {
     Write-Host "$path"
@@ -9,19 +9,28 @@ if ($path) {
 }
 
 Write-Host "`n=== INTERFACE ===" -ForegroundColor Cyan
-$adapters = Get-NetAdapter | Sort-Object InterfaceIndex
-foreach ($adapter in $adapters) {
-    $color = if ($adapter.Status -eq "Up") { "Green" } else { "White" }
-    $ip = Get-NetIPAddress -InterfaceAlias $adapter.Name -AddressFamily IPv4 -ErrorAction SilentlyContinue
-    $ipAddress = if ($ip) { $ip.IPAddress } else { "No-IP" }
-    Write-Host "$($adapter.Name): $ipAddress `"$($adapter.InterfaceDescription)`" " -ForegroundColor $color
+$adapters = Get-NetAdapter -ErrorAction SilentlyContinue
+
+if ($adapters) {
+    $adapters = $adapters | Sort-Object InterfaceIndex
+
+    foreach ($adapter in $adapters) {
+        $color = if ($adapter.Status -eq "Up") { "Green" } else { "White" }
+
+        $ip = Get-NetIPAddress -InterfaceAlias $adapter.Name -ErrorAction SilentlyContinue
+        $ipAddress = if ($ip) { ($ip.IPAddress -join ", ") } else { "No-IP" }
+
+        Write-Host "$($adapter.Name): $ipAddress [$($adapter.InterfaceDescription)]" -ForegroundColor $color
+    }
+} else {
+    Write-Host "No adapters found" -ForegroundColor Red
 }
 
 Write-Host "`n=== Public-IP ===" -ForegroundColor Cyan
 try {
-    $trace = Invoke-WebRequest "https://cloudflare.com/cdn-cgi/trace" -UseBasicParsing -TimeoutSec 5
+    $trace = Invoke-WebRequest "https://cloudflare.com/cdn-cgi/trace" -UseBasicParsing
     $data = ConvertFrom-StringData $trace.Content
-	$loc = if ($data.loc) { $data.loc } else { "Unknown" }
+    $loc = if ($data.loc) { $data.loc } else { "Unknown" }
     $color = if ($data.loc -eq "IR") { "Green" } else { "Yellow" }
     Write-Host "IP: $($data.ip) $loc" -ForegroundColor $color
 } catch {
@@ -29,11 +38,14 @@ try {
 }
 
 Write-Host "`n=== DNS SETTINGS ===" -ForegroundColor Cyan
-$dnsSettings = Get-DnsClientServerAddress | Where-Object { $_.AddressFamily -eq 2 -and $_.ServerAddresses }
-
-foreach ($dns in $dnsSettings) {
-    $dnsServers = $dns.ServerAddresses -join ','
-    Write-Host "$($dns.InterfaceAlias) `"$dnsServers`", " -NoNewline
+$dnsSettings = Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.ServerAddresses }
+if ($dnsSettings) {
+    foreach ($dns in $dnsSettings) {
+        $dnsServer = $dns.ServerAddresses -join ', '
+        Write-Host "$($dns.InterfaceAlias): $dnsServer"
+    }
+} else {
+    Write-Host "No DNS found" -ForegroundColor Red
 }
 
 try {
@@ -46,29 +58,22 @@ try {
 Write-Host "`n=== NETWORK LATENCY ===" -ForegroundColor Cyan
 
 try {
-    $pingResults = Test-Connection 4.2.2.4 -Count 9 -Delay 1 -ErrorAction Stop
-
-    $successPings = @($pingResults | Where-Object { $_.ResponseTime -ne $null })
-
-    if ($successPings.Count -eq 0) {
-        Write-Host "latency: Timeout" -ForegroundColor Red
-    }
-    else {
-        $avgPing = [math]::Round(($successPings.ResponseTime | Measure-Object -Average).Average)
-        $maxPing = ($successPings.ResponseTime | Measure-Object -Maximum).Maximum
-        $lostPackets = 9 - $successPings.Count
-        $differ = [math]::Abs($avgPing - $maxPing)
-
-        if ($maxPing -gt 300 -or $lostPackets -gt 0 -or $differ -gt 20) {
-            Write-Host "latency: ${avgPing}ms (issues detected)" -ForegroundColor Yellow
-        }
-        else {
-            Write-Host "latency: ${avgPing}ms" -ForegroundColor Green
-        }
-    }
-}
-catch {
+    Test-Connection 4.2.2.4 -Count 1 -ErrorAction Stop | Out-Null
+    $pingResults = Test-Connection 4.2.2.4 -Count 9 -Delay 1 -ErrorAction SilentlyContinue
+} catch {
     Write-Host "Unable to test" -ForegroundColor Red
+}
+
+$successPings = @($pingResults | Where-Object { $_.ResponseTime -ne $null })
+if ($successPings.Count -eq 0) {
+    Write-Host "Timeout" -ForegroundColor Red
+} else {
+    $avgPing = [math]::Round(($successPings.ResponseTime | Measure-Object -Average).Average)
+    $maxPing = ($successPings.ResponseTime | Measure-Object -Maximum).Maximum
+    $differ = [math]::Abs($avgPing - $maxPing)
+
+    $color = if ($successPings.Count -lt 9) { "Red" } elseif ($maxPing -gt 250 -or $differ -gt 20) { "Yellow" } else { "Green" }
+    Write-Host "latency: ${avgPing}ms" -ForegroundColor $color
 }
 
 Write-Host "`n=== PROXY STATUS ===" -ForegroundColor Cyan
@@ -81,9 +86,9 @@ if (Get-Command Get-MpComputerStatus -ErrorAction SilentlyContinue) {
         Write-Host "Real-time Protection:" $def.RealTimeProtectionEnabled
         Write-Host "Antispyware:" $def.AntispywareEnabled
         Write-Host "Antivirus:" $def.AntivirusEnabled
-	} catch {
-        Write-Host "Defender module not available" -ForegroundColor Red
-	}
+    } catch {
+        Write-Host "Defender module not Working" -ForegroundColor Red
+    }
 } else {
     Write-Host "Defender module not available"
 }
@@ -107,5 +112,5 @@ try {
     Write-Host "`nUnable to get SecureBoot" -ForegroundColor Red
 }
 
-Write-Host "`n=== FIREWALL STATUS ===" -ForegroundColor Cyan
+Write-Host "`n=== FIREWALL ===" -ForegroundColor Cyan
 Get-NetFirewallProfile | Select-Object Name, Enabled
