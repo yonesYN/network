@@ -1,5 +1,50 @@
+<#
+.NOTES
+    Author         : yonesYN
+    GitHub         : https://github.com/yonesYN
+    Version        : 1.0
+#>
 
-Write-Host "`n=== Location ===" -ForegroundColor Cyan
+
+$gg = [bool](whoami /groups | findstr "S-1-5-32-544")
+$ee = [bool](whoami /groups | findstr "S-1-16-12288")
+
+$agroup = whoami /groups | Select-String "S-1-16-"
+switch -Wildcard ($agroup.ToString()) {
+    "*S-1-16-12288*" { $ll = "Admin" }
+    "*S-1-16-8192*"  { $ll = "User" }
+    "*S-1-16-16384*" { $ll = "System" }
+    "*S-1-16-4096*"  { $ll = "Low" }
+    "*S-1-16-20480*" { $ll = "Protected Process" }
+    Default          { $ll = "Unknown" }
+}
+
+$services = @(
+    'msiserver',
+    'RpcSs',
+    'PlugPlay',
+    'RpcLocator',
+    'Netman',
+    'Dhcp',
+    'WlanSvc',
+    'WwanSvc',
+    'NlaSvc',
+    'netprofm',
+    'RmSvc',
+    'DsmSvc',
+    'DeviceInstall'
+)
+
+$svcs2 = @(
+    'nsi',
+    'Dhcp',
+    'netprofm',
+    'PlugPlay',
+    'RpcSs',
+    'NlaSvc'
+)
+
+Write-Host "`n=== GENERAL ===" -ForegroundColor Cyan
 $path = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object DisplayName -like "*Roboping*" | Select-Object -ExpandProperty InstallLocation
 
 if ($path) {
@@ -7,6 +52,10 @@ if ($path) {
 } else {
     Write-Host "Not found" -ForegroundColor red
 }
+
+Write-Host "`nAdminGroup: $gg" -ForegroundColor $(if ($gg) { "Green" } else { "Red" })
+Write-Host "elevated: $ee"
+Write-Host "Level: $ll"
 
 Write-Host "`n=== INTERFACE ===" -ForegroundColor Cyan
 $adapters = Get-NetAdapter -ErrorAction SilentlyContinue
@@ -72,7 +121,7 @@ if ($successPings.Count -eq 0) {
     $maxPing = ($successPings.ResponseTime | Measure-Object -Maximum).Maximum
     $differ = [math]::Abs($avgPing - $maxPing)
 
-    $color = if ($successPings.Count -lt 9) { "Red" } elseif ($maxPing -gt 250 -or $differ -gt 20) { "Yellow" } else { "Green" }
+    $color = if ($successPings.Count -lt 9) { "Red" } elseif ($maxPing -gt 250 -or $differ -gt 19) { "Yellow" } else { "Green" }
     Write-Host "latency: ${avgPing}ms" -ForegroundColor $color
 }
 
@@ -110,6 +159,21 @@ try {
     Write-Host "`nSecureBoot: $secureBoot`nTPM: $($tpm.TpmReady) $($tpm.TpmEnabled) $($tpm.TpmActivated)" -ForegroundColor $color
 } catch {
     Write-Host "`nUnable to get SecureBoot" -ForegroundColor Red
+}
+
+Write-Host "`n=== SERVICES ===" -ForegroundColor Cyan
+
+foreach ($service in $services) {
+    $svc = Get-Service -Name $service -ErrorAction SilentlyContinue
+    if ($svc) {
+        if ($svc.StartType -eq 'Disabled') {
+            Write-Host "$($svc.DisplayName) : Disabled" -ForegroundColor Red
+        } elseif ($svcs2 -contains $service -and $svc.Status -ne 'Running') {
+            Write-Host "$($svc.DisplayName) : $($svc.Status)" -ForegroundColor Magenta
+        }
+    } else {
+        Write-Host "XXX $service XXX" -ForegroundColor DarkRed
+    }
 }
 
 Write-Host "`n=== FIREWALL ===" -ForegroundColor Cyan
