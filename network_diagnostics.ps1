@@ -2,7 +2,7 @@
 .NOTES
     Author         : yonesYN
     GitHub         : https://github.com/yonesYN
-    Version        : 1.0
+    Version        : 1.1
 #>
 
 
@@ -20,6 +20,7 @@ switch -Wildcard ($agroup.ToString()) {
 }
 
 $services = @(
+    'nsi',
     'msiserver',
     'RpcSs',
     'PlugPlay',
@@ -32,7 +33,8 @@ $services = @(
     'netprofm',
     'RmSvc',
     'DsmSvc',
-    'DeviceInstall'
+    'DeviceInstall',
+	'W32Time'
 )
 
 $svcs2 = @(
@@ -45,9 +47,9 @@ $svcs2 = @(
 )
 
 Write-Host "`n=== GENERAL ===" -ForegroundColor Cyan
-$path = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object DisplayName -like "*Roboping*" | Select-Object -ExpandProperty InstallLocation
+$robo = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object DisplayName -like "*Roboping*" | Select-Object -ExpandProperty InstallLocation
 
-if ($path) {
+if ($robo) {
     Write-Host "$path"
 } else {
     Write-Host "Not found" -ForegroundColor red
@@ -177,4 +179,13 @@ foreach ($service in $services) {
 }
 
 Write-Host "`n=== FIREWALL ===" -ForegroundColor Cyan
+
+$path = "C:\Windows\System32\drivers\etc\hosts"
+
+if (Test-Path $path) {
+    Get-Content $path | Where-Object { $_.Trim() -ne "" -and $_ -notmatch '^\s*#' }
+} else {
+    Write-Host "Hosts file not found" -ForegroundColor Red
+}
+
 Get-NetFirewallProfile | Select-Object Name, Enabled
