@@ -50,7 +50,7 @@ Write-Host "`n=== GENERAL ===" -ForegroundColor Cyan
 $robo = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object DisplayName -like "*Roboping*" | Select-Object -ExpandProperty InstallLocation
 
 if ($robo) {
-    Write-Host "$path"
+    Write-Host "$robo"
 } else {
     Write-Host "Not found" -ForegroundColor red
 }
@@ -189,3 +189,4 @@ if (Test-Path $path) {
 }
 
 Get-NetFirewallProfile | Select-Object Name, Enabled
+
