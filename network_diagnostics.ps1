@@ -81,7 +81,7 @@ try {
 }
 
 Write-Host "`n=== DNS SETTINGS ===" -ForegroundColor Cyan
-$dnsSettings = Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Where-Object { $_.ServerAddresses }
+$dnsSettings = Get-DnsClientServerAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue | Sort-Object InterfaceIndex | Where-Object { $_.ServerAddresses }
 if ($dnsSettings) {
     foreach ($dns in $dnsSettings) {
         $dnsServer = $dns.ServerAddresses -join ', '
@@ -161,7 +161,7 @@ foreach ($name in $services.Keys) {
     $svc = Get-Service -Name $name -ErrorAction SilentlyContinue
     if ($svc) {
         if ($svc.StartType -eq 'Disabled') {
-            Write-Host "$($svc.DisplayName) : Disabled" -ForegroundColor Red
+            Write-Host "$($svc.DisplayName)" -ForegroundColor Red
         } elseif ($services[$name] -and $svc.Status -ne 'Running') {
             Write-Host "$($svc.DisplayName) : $($svc.Status)" -ForegroundColor Magenta
         }
