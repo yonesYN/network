@@ -2,9 +2,8 @@
 .NOTES
     Author         : yonesYN
     GitHub         : https://github.com/yonesYN
-    Version        : 1.1
+    Version        : 1.2
 #>
-
 
 $gg = [bool](whoami /groups | findstr "S-1-5-32-544")
 $ee = [bool](whoami /groups | findstr "S-1-16-12288")
@@ -19,32 +18,25 @@ switch -Wildcard ($agroup.ToString()) {
     Default          { $ll = "Unknown" }
 }
 
-$services = @(
-    'nsi',
-    'msiserver',
-    'RpcSs',
-    'PlugPlay',
-    'RpcLocator',
-    'Netman',
-    'Dhcp',
-    'WlanSvc',
-    'WwanSvc',
-    'NlaSvc',
-    'netprofm',
-    'RmSvc',
-    'DsmSvc',
-    'DeviceInstall',
-	'W32Time'
-)
+$services = @{
+    'nsi' = $true
+    'RpcSs' = $true
+    'PlugPlay' = $true
+    'Dhcp' = $true
+    'NlaSvc' = $true
+    'netprofm' = $true
+    'wintun' = $true
+    'msiserver' = $false
+    'RpcLocator' = $false
+    'Netman' = $false
+    'WlanSvc' = $false
+    'WwanSvc' = $false
+    'RmSvc' = $false
+    'DsmSvc' = $false
+    'DeviceInstall' = $false
+    'W32Time' = $false
+}
 
-$svcs2 = @(
-    'nsi',
-    'Dhcp',
-    'netprofm',
-    'PlugPlay',
-    'RpcSs',
-    'NlaSvc'
-)
 
 Write-Host "`n=== GENERAL ===" -ForegroundColor Cyan
 $robo = Get-ItemProperty HKLM:\Software\Microsoft\Windows\CurrentVersion\Uninstall\* | Where-Object DisplayName -like "*Roboping*" | Select-Object -ExpandProperty InstallLocation
@@ -122,9 +114,9 @@ if ($successPings.Count -eq 0) {
     $avgPing = [math]::Round(($successPings.ResponseTime | Measure-Object -Average).Average)
     $maxPing = ($successPings.ResponseTime | Measure-Object -Maximum).Maximum
     $differ = [math]::Abs($avgPing - $maxPing)
-
     $color = if ($successPings.Count -lt 9) { "Red" } elseif ($maxPing -gt 250 -or $differ -gt 19) { "Yellow" } else { "Green" }
-    Write-Host "latency: ${avgPing}ms" -ForegroundColor $color
+
+    Write-Host "latency: ${avgPing}ms  $differ" -ForegroundColor $color
 }
 
 Write-Host "`n=== PROXY STATUS ===" -ForegroundColor Cyan
@@ -165,16 +157,16 @@ try {
 
 Write-Host "`n=== SERVICES ===" -ForegroundColor Cyan
 
-foreach ($service in $services) {
-    $svc = Get-Service -Name $service -ErrorAction SilentlyContinue
+foreach ($name in $services.Keys) {
+    $svc = Get-Service -Name $name -ErrorAction SilentlyContinue
     if ($svc) {
         if ($svc.StartType -eq 'Disabled') {
             Write-Host "$($svc.DisplayName) : Disabled" -ForegroundColor Red
-        } elseif ($svcs2 -contains $service -and $svc.Status -ne 'Running') {
+        } elseif ($services[$name] -and $svc.Status -ne 'Running') {
             Write-Host "$($svc.DisplayName) : $($svc.Status)" -ForegroundColor Magenta
         }
     } else {
-        Write-Host "XXX $service XXX" -ForegroundColor DarkRed
+        Write-Host "XXX $name XXX" -ForegroundColor DarkRed
     }
 }
 
@@ -183,10 +175,9 @@ Write-Host "`n=== FIREWALL ===" -ForegroundColor Cyan
 $path = "C:\Windows\System32\drivers\etc\hosts"
 
 if (Test-Path $path) {
-    Get-Content $path | Where-Object { $_.Trim() -ne "" -and $_ -notmatch '^\s*#' }
+    Get-Content $path | Where-Object { $_ -match '\S' -and $_ -notmatch '^\s*#' }
 } else {
     Write-Host "Hosts file not found" -ForegroundColor Red
 }
 
 Get-NetFirewallProfile | Select-Object Name, Enabled
-
