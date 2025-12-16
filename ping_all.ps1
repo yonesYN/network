@@ -1,50 +1,53 @@
 mode con: cols=40 lines=20
 $servers = @(
-    "hybrid.roboping.ir",
-    "germany.roboping.ir", 
-    "download.roboping.ir",
-    "turkiye.roboping.ir",
-    "russia.roboping.ir",
-    "goethe.roboping.ir",
-    "oman.roboping.ir",
-    "izmir.roboping.ir",
-    "uae.roboping.ir",
-    "uk.roboping.ir",
-    "usa.roboping.ir"
+"armenia"
+"download"
+"france"
+"germany"
+"germany2"
+"hybrid"
+"netherland"
+"oman"
+"poland"
+"russia"
+"spain"
+"turkiye"
+"turkiye2"
+"uae"
+"uk"
+"usa"
 )
 
-$previousPingTimes = @{}
+$BPing = @{}
 
 function PingServer {
-    param([string]$Server)
-    try {
-        $response = Test-Connection -ComputerName $Server -Count 1 -ErrorAction Stop
-        $pingTime = $response.ResponseTime
-        $previousTime = $previousPingTimes[$Server]
+	param([string]$Server)
+	try {
+		$response = Test-Connection -ComputerName "${Server}.roboping.ir" -Count 1 -ErrorAction Stop
+		$pingTime = $response.ResponseTime
+		$PPing = $BPing[$Server]
 
-		$color = if ($pingTime -gt 190) { 
-            'Yellow'
-        } elseif ($previousTime -and [Math]::Abs($pingTime - $previousTime) -gt 18) {
-            'Yellow'
-        } else { 
-            'White'
-        }
+		$cr = if ($pingTime -gt 240) { 
+			'[33m'
+		} elseif ($PPing -and [Math]::Abs($pingTime - $PPing) -gt 19) {
+			'[93m'
+		} else { '[0m' }
 
-        Write-Host "$Server	${pingTime}ms" -ForegroundColor $color
-        $previousPingTimes[$Server] = $pingTime
-    }
-    catch {
-        Write-Host "$Server" -ForegroundColor Red
-        $previousPingTimes[$Server] = $null
-    }
+		echo "$cr$pingTime	$Server"
+		$BPing[$Server] = $pingTime
+	}
+	catch {
+		echo "[91m$Server"
+		$BPing[$Server] = $null
+	}
 }
-
+echo "Loading.."
 while ($true) {
-    Clear-Host
-    Write-Host "========================" -ForegroundColor Cyan
-    foreach ($server in $servers) {
-        PingServer -Server $server
-    }
-    Start-Sleep -Seconds 4
-}
+	$result = foreach ($server in $servers) {
+		PingServer -Server $server
+	}
 
+	Clear-Host
+	Write-Host ("==" * 8) -ForegroundColor Cyan
+	[Console]::Write(($result -join "`n") + "`n")
+}
