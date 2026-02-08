@@ -1,29 +1,20 @@
-mode con: cols=40 lines=20
+mode con: cols=38 lines=20
 $servers = @(
-"armenia"
-"download"
-"france"
-"germany"
-"germany2"
-"hybrid"
-"netherland"
-"oman"
-"poland"
-"russia"
-"spain"
-"turkiye"
-"turkiye2"
-"uae"
-"uk"
-"usa"
+'8.8.8.8'
+'1.1.1.1'
+'4.2.2.4'
+'9.9.9.9'
+'77.88.8.1'
+'76.76.2.5'
 )
+
 
 $BPing = @{}
 
 function PingServer {
 	param([string]$Server)
 	try {
-		$response = Test-Connection -ComputerName "${Server}.roboping.ir" -Count 1 -ErrorAction Stop
+		$response = Test-Connection -ComputerName "$Server" -Count 1 -ErrorAction Stop
 		$pingTime = $response.ResponseTime
 		$PPing = $BPing[$Server]
 
@@ -49,5 +40,5 @@ while ($true) {
 
 	Clear-Host
 	Write-Host ("==" * 8) -ForegroundColor Cyan
-	[Console]::Write(($result -join "`n") + "`n")
+	[Console]::Write($result -join "`n")
 }
