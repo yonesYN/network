@@ -181,3 +181,4 @@ if (Test-Path $path) {
 }
 
 Get-NetFirewallProfile | Select-Object Name, Enabled
+pause
